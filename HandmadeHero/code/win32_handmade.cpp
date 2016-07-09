@@ -1,54 +1,99 @@
 #include <Windows.h>
 
+#define internal static 
+#define local_persist static 
+#define global_variable static 
+
+global_variable bool Running;
+global_variable BITMAPINFO BitmapInfo; // Note (Daltin): All members are initialized to zero
+global_variable void *BitmapMemory;
+global_variable HBITMAP BitmapHandle;
+global_variable HDC BitmapDeviceContext;
+
+internal void
+Win32ResizeDIBSection(int Width, int Height)
+{
+	if (BitmapHandle)
+	{
+		DeleteObject(BitmapHandle);
+	}
+
+	if (!BitmapDeviceContext)
+	{
+		BitmapDeviceContext = CreateCompatibleDC(0);
+	}
+
+	BitmapInfo.bmiHeader.biSize = sizeof(BitmapInfo.bmiHeader);
+	BitmapInfo.bmiHeader.biWidth = Width;
+	BitmapInfo.bmiHeader.biHeight = Height;
+	BitmapInfo.bmiHeader.biPlanes = 1;
+	BitmapInfo.bmiHeader.biBitCount = 32;
+	BitmapInfo.bmiHeader.biCompression = BI_RGB;
+
+	BitmapHandle = CreateDIBSection( BitmapDeviceContext, &BitmapInfo, DIB_RGB_COLORS,	&BitmapMemory,	0,	0);
+
+	ReleaseDC(0, BitmapDeviceContext);
+}
+
+internal void
+Win32UpdateWindow(HDC DeviceContext, int X, int Y, int Width, int Height)
+{
+	StretchDIBits(DeviceContext, 
+					  X, Y, Width, Height,
+					  X, Y, Width, Height,
+					  BitmapMemory,
+					  &BitmapInfo,
+					  DIB_RGB_COLORS,
+					  SRCCOPY);
+}
+
 LRESULT CALLBACK
-MainWindowCallback(
-	HWND   Window,
-	UINT   Message,
-	WPARAM WParam,
-	LPARAM LParam)
+Win32MainWindowCallback(HWND   Window,
+								UINT   Message,
+								WPARAM WParam,
+								LPARAM LParam)
 {
 	LRESULT Result = 0;
 
-	switch (Message) {
-
-		case WM_SIZE: 
+	switch (Message)
+	{
+		case WM_SIZE:
 		{
+			RECT ClientRect;
+			GetClientRect(Window, &ClientRect);
+			int Height = ClientRect.bottom - ClientRect.top;
+			int Width = ClientRect.right - ClientRect.left;
+			Win32ResizeDIBSection(Width, Height);
 			OutputDebugString("WM_SIZE\n");
 			return 0;
 		} break;
 
-		case WM_DESTROY: 
+		case WM_CLOSE:
 		{
-			OutputDebugString("WM_DESTROY\n");
-		} break;
-
-		case WM_CLOSE: 
-		{
+			Running = false;
 			OutputDebugString("VM_CLOSE\n");
 		} break;
 
-		case WM_ACTIVATEAPP: 
+		case WM_ACTIVATEAPP:
 		{
 			OutputDebugString("WM_ACTIVATEAPP\n");
 		} break;
 
-		case WM_PAINT: 
+		case WM_DESTROY:
+		{
+			Running = false;
+			OutputDebugString("WM_DESTROY\n");
+		} break;
+
+		case WM_PAINT:
 		{
 			PAINTSTRUCT Paint;
 			HDC DeviceContext = BeginPaint(Window, &Paint);
-			int X = Paint.rcPaint.left;
+			int X = Paint.rcPaint.left;static 
 			int Y = Paint.rcPaint.left;
 			int Height = Paint.rcPaint.bottom - Paint.rcPaint.top;
 			int Width = Paint.rcPaint.right - Paint.rcPaint.left;
-
-			static DWORD operation = WHITENESS;
-			PatBlt(DeviceContext, X, Y, Width, Height, operation);
-			if (operation == WHITENESS) {
-				operation = BLACKNESS;
-			}
-			else {
-				operation = WHITENESS;
-			}
+			Win32UpdateWindow(DeviceContext, X, Y, Width, Height);
 			EndPaint(Window, &Paint);
 		} break;
 
@@ -71,15 +116,15 @@ int CALLBACK WinMain(
 	WNDCLASS WindowClass = {}; // Note (Daltin): empty curly brackets initializes all values to 0
 
 	WindowClass.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
-	WindowClass.lpfnWndProc = MainWindowCallback;
+	WindowClass.lpfnWndProc = Win32MainWindowCallback;
 	WindowClass.hInstance = Instance;
 	// WindowClass.hIcon = ; // Don't have an icon yet, but we will in the future
 	WindowClass.lpszClassName = "HandmadeHeroWindowClass";
 
 	//MessageBox(0, "This is handmade hero", "Handmade Hero", MB_OK | MB_ICONINFORMATION);
 
-	if (RegisterClass(&WindowClass)) {
-		HWND WindowHandle = CreateWindowEx(
+	if (RegisterClassA(&WindowClass)) {
+		HWND WindowHandle = CreateWindowExA(
 			0,
 			WindowClass.lpszClassName,
 			"Handmade Hero",
@@ -93,13 +138,17 @@ int CALLBACK WinMain(
 			Instance,
 			0);
 		DWORD error = GetLastError();
-		if (WindowHandle != NULL) {
-			for (;;) {
+		if (WindowHandle != NULL) 
+		{
+			Running = true;
+			while (Running) 
+			{
 				MSG Message;
-				BOOL MessageResult = GetMessage(&Message, 0, 0, 0);
-				if (MessageResult > 0) {
+				BOOL MessageResult = GetMessageA(&Message, 0, 0, 0);
+				if (MessageResult > 0) 
+				{
 					TranslateMessage(&Message);
-					DispatchMessage(&Message);
+					DispatchMessageA(&Message);
 				}
 				else {
 					break; // Break out of for loop
@@ -109,7 +158,6 @@ int CALLBACK WinMain(
 		else {
 			// TODO Implement Logging
 		}
-
 	}
 	else {
 		// TODO Implement Logging
