@@ -1,0 +1,18 @@
+HandMade Hero Episodes I've watched
+
+Intro to C on Windows - Day 1
+Intro to C on Windows - Day 1 Q&A
+Intro to C on Windows - Day 2
+Intro to C on Windows - Day 2 Q&A
+Intro to C on Windows - Day 3
+Intro to C on Windows - Day 3 Q&A
+Intro to C on Windows - Day 4
+Intro to C on Windows - Day 4 Q&A
+Intro to C on Windows - Day 5
+Intro to C on Windows - Day 5 Q&A
+
+Day 001 - Setting Up the Windows Build
+Day 001 Q&A
+Day 002 - Opening a Win32 Window
+Day 002 Q&A
+Day 003 - Allocatinng a Backbuffer
